@@ -20,6 +20,6 @@ TODO
 Well there are plenty build systems out there. While some people are upset by [the sheer abundance of build systems](https://www.reddit.com/r/programming/comments/gm1dy/stop_inventing_motherfucking_build_systems/), others are mad at the current selection of build systems. They usually have a hell lot of dependences and require the most complex, unintuitive setup for the most basic tasks (I might write a list sometime to outline my fun experiences).
 
 ## stb, this remembers me of something...
-First of im not affiliated with [Sean Barret (nothings)](https://github.com/nothings/) in any way. I just appreciate the librarys this guy realesed into the wild and the fact that they usually consist of a single c++ source file. And others seem to like these too, as there are other authors following this idea and they get [actively promoted by Sean Barret](https://github.com/nothings/single_file_libs).
+First of im not affiliated with [Sean Barret (nothings)](https://github.com/nothings/) in any way. But yes the name STBuild was choosen on purpose. I just highly appreciate the librarys this guy realesed into the wild and the fact that they usually consist of a single c++ source file. And others seem to like these too, as there are other authors following this idea and they get [actively promoted by Sean Barret](https://github.com/nothings/single_file_libs).
 
 Well if you never heard of Sean Berret and his work, it's a shame and you should definitively [go check it out](https://github.com/nothings/stb).
