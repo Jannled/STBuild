@@ -3,11 +3,43 @@
 #include <iostream>
 #include <exception>
 #include <string>
-#include <stack>
+#include <queue>
 
 #include "yaml/Yaml.hpp"
 
 using namespace Yaml;
+
+/*
+// Platform is windows
+#if defined _WIN32 || defined __MINGW32__
+#pragma message("[STBuild] Detected Windows")
+
+// Platform is Linux
+#elif defined(__linux__)
+#pragma message("[STBuild] Detected Linux")
+
+// Platform is FreeBSD
+#elif defined(__FreeBSD__)
+#pragma message("[STBuild] Detected FreeBSD")
+
+// Platform is MAC
+#elif defined(__APPLE__) && defined(__MACH__)
+#pragma message("[STBuild] Detected Apple")
+
+// Platform is Android
+#elif defined(__ANDROID__)
+#pragma message("[STBuild] Detected Android")
+
+// Platform is Unixoid
+#elif defined(unix) || defined(__unix__) || defined(__unix)
+#pragma warn("[STBuild] Detected Unix")
+
+// Unknown Platform
+#else 
+#error("[STBuild] Unable to get information about the platform STBuild is compiled from!")
+#endif
+*/
+
 
 int main(int argc, char** argv)
 {
@@ -22,7 +54,7 @@ int main(int argc, char** argv)
     }
 
     // Generate a list of target names
-    std::stack<std::string> targetNames = std::stack<std::string>();
+    std::queue<std::string> targetNames = std::queue<std::string>();
 
     Node & targets = root["targets"];
     for(auto target = targets.Begin(); target != targets.End(); target++)
@@ -33,7 +65,19 @@ int main(int argc, char** argv)
     // For each target compile all files and link them together
     while (!targetNames.empty())
     {
-        std::cout << targetNames.top() << std::endl;
+        Node & files = root["targets"][targetNames.front()]["files"];
+        std::cout << targetNames.front() << std::endl;
+
+        for(auto file = files.Begin(); file != files.End(); file++)
+        {
+            std::string command = "gcc -c ";
+            command.append((*file).second.As<std::string>());
+            command.append(" -o bin/");
+            command.append((*file).second.As<std::string>());
+            command.append(".o");
+
+            system(command.c_str());
+        }
         targetNames.pop();
     }
     
