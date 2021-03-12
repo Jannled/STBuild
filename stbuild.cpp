@@ -5,6 +5,8 @@
 #include <string>
 #include <queue>
 
+#include <filesystem>
+
 #include "yaml/Yaml.hpp"
 
 using namespace Yaml;
@@ -100,33 +102,51 @@ int main(int argc, char** argv)
         Node & files = root["targets"][targetNames.front()]["files"];
         std::cout << targetNames.front() << std::endl;
 
+        // List of objects that need linking
+        std::queue<std::string> linkObjects = std::queue<std::string>();
+
+        // For each C/C++ source file do compilation
         for(auto file = files.Begin(); file != files.End(); file++)
         {
+            // Input file path
+            std::string fileName = (*file).second.As<std::string>();
+
+            // Build object file path
+            std::string objectFileName = "bin/";
+            objectFileName.append(fileName);
+            objectFileName.append(".o");
+
+            linkObjects.push(objectFileName);
+
+            // Build object file
+            std::filesystem::path objectFile = std::filesystem::path(objectFileName);
+
+            // Create directorys
+            std::filesystem::create_directories(objectFile.parent_path());
+
+            // Append and run compile command
             std::string command = "gcc -c ";
-            command.append((*file).second.As<std::string>());
+            command.append(fileName);
             command.append(" -o bin/");
-            command.append((*file).second.As<std::string>());
+            command.append(fileName);
             command.append(".o");
 
             system(command.c_str());
         }
+
+        // Link all object files from previous step into an executable
+        std::string command = "gcc";
+        while(!linkObjects.empty())
+        {
+            command.append(" ");
+            command.append(linkObjects.front());
+            linkObjects.pop();
+        }
+        command.append(" -o bin/");
+        command.append(root["targets"][targetNames.front()]["name"].As<std::string>());
+
+        system(command.c_str());
+
         targetNames.pop();
     }
-    
-    // Runs command in shell
-    //system("echo Test");
-}
-
-const char* toCanonicalPath(const char* path, char* buff)
-{
-	if(!buff)
-		buff = new char[PATH_MAX];
-
-	#ifdef OS_WINDOWS
-	_fullpath(buff, path, PATH_MAX); //Maybe GetFullPathName() come in handy sometime
-	return buff;
-
-	#elif defined OS_LINUX
-	return realpath(path, buff);
-	#endif
 }

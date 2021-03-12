@@ -2,34 +2,9 @@ targets:
   stbuild:
     language: c/c++
     type: executable
-    name: testname.exe
+    name: testname
     files:
-      - stbuild.cpp
-      - yaml/yaml.cpp
+      - testBuild/main.c
+      - testBuild/test.c
     dependencies:
     assets:
-      - test.yml
-
-  testbuild:
-    language: c/c++
-    type: sharded-library
-    name: testtwo.dll
-    files:
-      - stbuild.cpp
-      - yaml/yaml.cpp
-    dependencies:
-      - stbuild
-    assets:
-      - test.yml
-
-  wearenumberthree:
-    language: c/c++
-    type: sharded-library
-    name: testtwo.dll
-    files:
-      - stbuild.cpp
-      - yaml/yaml.cpp
-    dependencies:
-      - stbuild
-    assets:
-      - test.yml
