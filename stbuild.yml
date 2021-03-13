@@ -1,10 +1,11 @@
 targets:
   stbuild:
-    language: c/c++
+    language: cpp
     type: executable
     name: testname
-    files:
+    cfiles:
       - testBuild/main.c
       - testBuild/test.c
+    c++files:
     dependencies:
     assets:

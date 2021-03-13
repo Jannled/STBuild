@@ -11,59 +11,9 @@
 
 using namespace Yaml;
 
-#define DEBUG_STBUILD 1
-
-// Platform is windows
-#if defined(_WIN32) || defined(__MINGW32__)
-#define OS_WINDOWS
-#if defined(DEBUG_STBUILD) 
-    #pragma message("[STBuild] Detected Windows") 
-#endif
-
-#ifndef MAX_PATH 
-    #define MAX_PATH 260
-#endif
-#define PATH_MAX MAX_PATH
-
-// Platform is Linux
-#elif defined(__linux__)
-#define OS_LINUX
-#if defined(DEBUG_STBUILD) 
-    #pragma message("[STBuild] Detected Linux")
-#endif
-
-// Platform is FreeBSD
-#elif defined(__FreeBSD__)
-#if defined(DEBUG_STBUILD) 
-    #pragma message("[STBuild] Detected FreeBSD")
-#endif
-
-// Platform is MAC
-#elif defined(__APPLE__) && defined(__MACH__)
-#if defined(DEBUG_STBUILD) 
-    #pragma message("[STBuild] Detected Apple")
-#endif
-
-// Platform is Android
-#elif defined(__ANDROID__)
-#if defined(DEBUG_STBUILD) 
-    #pragma message("[STBuild] Detected Android")
-#endif
-
-
-// Platform is Unixoid
-#elif defined(unix) || defined(__unix__) || defined(__unix)
-#if defined(DEBUG_STBUILD) 
-    #pragma warn("[STBuild] Detected Unix")
-#endif
-#pragma warn("[STBuild] Detected Unix")
-
-// Unknown Platform
-#else 
-#error("[STBuild] Unable to get information about the platform STBuild is compiled from!")
-#endif
-
-const char* workDir;
+/* Function definitions */
+int compile(std::string& inputFile, std::string& outputDir, std::queue<std::string>& linkObjects);
+int link(std::queue<std::string>& linkObjects, std::string& outputDir, std::string& execName);
 
 int main(int argc, char** argv)
 {  
@@ -74,8 +24,6 @@ int main(int argc, char** argv)
         std::cout << argv[i];
     }
     std::cout << "]" << std::endl;
-
-    workDir = argv[0];
 
     Yaml::Node root;
 
@@ -96,11 +44,14 @@ int main(int argc, char** argv)
         targetNames.push((*target).first);
     }
 
+    std::string binDir = "bin/";
+
     // For each target compile all files and link them together
     while (!targetNames.empty())
     {
         Node & files = root["targets"][targetNames.front()]["files"];
         std::cout << targetNames.front() << std::endl;
+
 
         // List of objects that need linking
         std::queue<std::string> linkObjects = std::queue<std::string>();
@@ -111,42 +62,64 @@ int main(int argc, char** argv)
             // Input file path
             std::string fileName = (*file).second.As<std::string>();
 
-            // Build object file path
-            std::string objectFileName = "bin/";
-            objectFileName.append(fileName);
-            objectFileName.append(".o");
-
-            linkObjects.push(objectFileName);
-
-            // Build object file
-            std::filesystem::path objectFile = std::filesystem::path(objectFileName);
-
-            // Create directorys
-            std::filesystem::create_directories(objectFile.parent_path());
-
-            // Append and run compile command
-            std::string command = "gcc -c ";
-            command.append(fileName);
-            command.append(" -o bin/");
-            command.append(fileName);
-            command.append(".o");
-
-            system(command.c_str());
+            compile(fileName, binDir, linkObjects);
         }
 
         // Link all object files from previous step into an executable
-        std::string command = "gcc";
-        while(!linkObjects.empty())
-        {
-            command.append(" ");
-            command.append(linkObjects.front());
-            linkObjects.pop();
-        }
-        command.append(" -o bin/");
-        command.append(root["targets"][targetNames.front()]["name"].As<std::string>());
-
-        system(command.c_str());
+        std::string execName = root["targets"][targetNames.front()]["name"].As<std::string>();
+        link(linkObjects, binDir, execName);
 
         targetNames.pop();
     }
+}
+
+int compileAndLink()
+{
+    
+}
+
+int compile(std::string& inputFile, std::string& outputDir, std::queue<std::string>& linkObjects)
+{
+    // Build object file path
+    std::string objectFileName = outputDir;
+    objectFileName.append(inputFile);
+    objectFileName.append(".o");
+
+    linkObjects.push(objectFileName);
+
+    // Build object file
+    std::filesystem::path objectFile = std::filesystem::path(objectFileName);
+
+    // Create directorys
+    std::filesystem::create_directories(objectFile.parent_path());
+
+    // Append and run compile command
+    std::string command = "gcc -c ";
+    command.append(inputFile);
+    command.append(" -o ");
+    command.append(objectFileName);
+
+    return system(command.c_str());
+}
+
+int link(std::queue<std::string>& linkObjects, std::string& outputDir, std::string& execName) 
+{
+    // Append and run link command
+    std::string command = "gcc";
+    while(!linkObjects.empty())
+    {
+        command.append(" ");
+        command.append(linkObjects.front());
+        linkObjects.pop();
+    }
+    command.append(" -o ");
+    command.append(outputDir);
+    command.append(execName);
+
+    // Just make sure the exe postfix is added on windows
+    #if defined _WIN32 || defined __MINGW32__
+        command.append(".exe");
+    #endif
+
+    return system(command.c_str());
 }
