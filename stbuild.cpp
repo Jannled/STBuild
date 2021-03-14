@@ -114,7 +114,7 @@ int calGCC(std::queue<std::string>& sourceFilesC, std::queue<std::string>& sourc
     while (!sourceFilesCPP.empty())
     {
         compileGCC(sourceFilesCPP.front(), linkObjects, targetSettings, true);
-        sourceFilesC.pop();
+        sourceFilesCPP.pop();
     }
 
     // Link all object files from previous step into an executable

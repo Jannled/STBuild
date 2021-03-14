@@ -2,7 +2,7 @@
 ## What makes this build system different
 ### **S**ingle file
 The entire source code for this build system is inside a single .cpp for the following reasons:
-1. No other dependencies other than the std library (the embedded yaml parser) and a compiler of course. No need to install a third party build-system, Python etc.
+1. No other dependencies other than the std library (the embedded [yaml parser](https://github.com/jimmiebergmann/mini-yaml)) and a compiler of course. No need to install a third party build-system, Python etc.
 2. `g++ stbuild.cpp yaml/Yaml.cpp --std=c++17 -o stbuild` is all you need to compile this build system into an executable (well except for MSVC lol). This should make it easily portable to different platforms.
 
 \* Currently the yaml parser is not included in the stbuild.cpp, so the command is a little more involved at the moment (you have to include a second file), but this is an early prototype and will propably change in the future!
