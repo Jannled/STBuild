@@ -11,13 +11,21 @@
 
 using namespace Yaml;
 
+/* Struct definitions */
+struct target_settings {
+    const char* buildOutDir;
+    bool debug;
+    const char* execName;
+};
+
 /* Function definitions */
-int compile(std::string& inputFile, std::string& outputDir, std::queue<std::string>& linkObjects);
-int link(std::queue<std::string>& linkObjects, std::string& outputDir, std::string& execName);
+int calGCC(std::queue<std::string>& sourceFilesC, std::queue<std::string>& sourceFilesCPP, struct target_settings& targetSettings);
+int compileGCC(std::string& inputFile, std::queue<std::string>& linkObjects, struct target_settings& targetSettings, bool cpp);
+int linkGCC(std::queue<std::string>& linkObjects, struct target_settings& targetSettings);
 
 int main(int argc, char** argv)
 {  
-    std::cout << "Starting program with args: [";
+    std::cout << "[STBuild] Starting program with args: [";
     for(int i=0; i<argc; i++)
     {
         if(i > 0) std::cout << ", ";
@@ -47,65 +55,103 @@ int main(int argc, char** argv)
     std::string binDir = "bin/";
 
     // For each target compile all files and link them together
-    while (!targetNames.empty())
+    while(!targetNames.empty())
     {
-        Node & files = root["targets"][targetNames.front()]["files"];
-        std::cout << targetNames.front() << std::endl;
+        struct target_settings targetSettings;
+        targetSettings.buildOutDir  = "bin/";
+        targetSettings.debug        = true;
+        targetSettings.execName     = root["targets"][targetNames.front()]["name"].As<std::string>().c_str();
 
+        std::cout << "[STBuild] Working on target \"" << targetNames.front() << "\"" << std::endl;
 
-        // List of objects that need linking
-        std::queue<std::string> linkObjects = std::queue<std::string>();
+        // List of objects that need compilation
+        std::queue<std::string> sourceFilesC = std::queue<std::string>();
+        std::queue<std::string> sourceFilesCPP = std::queue<std::string>();
 
-        // For each C/C++ source file do compilation
-        for(auto file = files.Begin(); file != files.End(); file++)
+        // Add each C source file to the uncompiled list
+        Node & cfiles = root["targets"][targetNames.front()]["cfiles"];
+        if(cfiles.IsSequence())
         {
-            // Input file path
-            std::string fileName = (*file).second.As<std::string>();
-
-            compile(fileName, binDir, linkObjects);
+            for(auto file = cfiles.Begin(); file != cfiles.End(); file++)
+                sourceFilesC.push((*file).second.As<std::string>());
         }
 
-        // Link all object files from previous step into an executable
-        std::string execName = root["targets"][targetNames.front()]["name"].As<std::string>();
-        link(linkObjects, binDir, execName);
+        // Add each C++ source file to the uncompiled list
+        Node & pfiles = root["targets"][targetNames.front()]["c++files"];
+        if(pfiles.IsSequence())
+        {
+            for(auto file = pfiles.Begin(); file != pfiles.End(); file++)
+                sourceFilesCPP.push((*file).second.As<std::string>());
+        }
+
+        // Let the compiler backend do its magic
+        calGCC(sourceFilesC, sourceFilesCPP, targetSettings);
 
         targetNames.pop();
     }
 }
 
-int compileAndLink()
+int compileAndLink(std::queue<std::string>& sourceFiles, struct target_settings& targetSettings)
 {
-    
+    return 0;
 }
 
-int compile(std::string& inputFile, std::string& outputDir, std::queue<std::string>& linkObjects)
+int calGCC(std::queue<std::string>& sourceFilesC, std::queue<std::string>& sourceFilesCPP, struct target_settings& targetSettings)
 {
-    // Build object file path
-    std::string objectFileName = outputDir;
+    std::cout << "[STBuild] compiling target with gcc" << std::endl;
+
+    // List of objects that need linking
+    std::queue<std::string> linkObjects = std::queue<std::string>();
+
+    // For each C/C++ source file do compilation
+    while (!sourceFilesC.empty())
+    {
+        compileGCC(sourceFilesC.front(), linkObjects, targetSettings, false);
+        sourceFilesC.pop();
+    }
+
+    // For each C/C++ source file do compilation
+    while (!sourceFilesCPP.empty())
+    {
+        compileGCC(sourceFilesCPP.front(), linkObjects, targetSettings, true);
+        sourceFilesC.pop();
+    }
+
+    // Link all object files from previous step into an executable
+    linkGCC(linkObjects, targetSettings);
+
+    return 0;
+}
+
+int compileGCC(std::string& inputFile, std::queue<std::string>& linkObjects, struct target_settings& targetSettings, bool cpp)
+{
+    // Build object file path from binDir, sourceFileName and the ending .o
+    std::string objectFileName = targetSettings.buildOutDir;
     objectFileName.append(inputFile);
     objectFileName.append(".o");
 
+    // Add above created file to files that need linking
     linkObjects.push(objectFileName);
 
-    // Build object file
-    std::filesystem::path objectFile = std::filesystem::path(objectFileName);
-
-    // Create directorys
-    std::filesystem::create_directories(objectFile.parent_path());
+    // Get parent directory of object file to build directory structure
+    std::filesystem::create_directories(std::filesystem::path(objectFileName).parent_path());
 
     // Append and run compile command
-    std::string command = "gcc -c ";
+    std::string command = cpp ? "g++ -c " : "gcc -c " ;
+    if(targetSettings.debug) command.append("-O0 -g3 ");
     command.append(inputFile);
     command.append(" -o ");
     command.append(objectFileName);
 
+    std::cout << command << std::endl;
     return system(command.c_str());
 }
 
-int link(std::queue<std::string>& linkObjects, std::string& outputDir, std::string& execName) 
+int linkGCC(std::queue<std::string>& linkObjects, struct target_settings& targetSettings)
 {
     // Append and run link command
     std::string command = "gcc";
+    if(targetSettings.debug) command.append(" -O0 -Wl,-O0 ");
     while(!linkObjects.empty())
     {
         command.append(" ");
@@ -113,13 +159,14 @@ int link(std::queue<std::string>& linkObjects, std::string& outputDir, std::stri
         linkObjects.pop();
     }
     command.append(" -o ");
-    command.append(outputDir);
-    command.append(execName);
+    command.append(targetSettings.buildOutDir);
+    command.append(targetSettings.execName);
 
     // Just make sure the exe postfix is added on windows
-    #if defined _WIN32 || defined __MINGW32__
+    #if defined _WIN32 || defined __MINGW32__ || defined _WIN64
         command.append(".exe");
     #endif
 
+    std::cout << command << std::endl;
     return system(command.c_str());
 }
