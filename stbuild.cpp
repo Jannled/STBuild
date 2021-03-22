@@ -52,8 +52,6 @@ int main(int argc, char** argv)
         targetNames.push((*target).first);
     }
 
-    std::string binDir = "bin/";
-
     // For each target compile all files and link them together
     while(!targetNames.empty())
     {
@@ -103,14 +101,17 @@ int calGCC(std::queue<std::string>& sourceFilesC, std::queue<std::string>& sourc
     // List of objects that need linking
     std::queue<std::string> linkObjects = std::queue<std::string>();
 
-    // For each C/C++ source file do compilation
+    // Build file tree
+    std::filesystem::recursive_directory_iterator dirpos(".");
+
+    // For each C source file do compilation
     while (!sourceFilesC.empty())
     {
         compileGCC(sourceFilesC.front(), linkObjects, targetSettings, false);
         sourceFilesC.pop();
     }
 
-    // For each C/C++ source file do compilation
+    // For each C++ source file do compilation
     while (!sourceFilesCPP.empty())
     {
         compileGCC(sourceFilesCPP.front(), linkObjects, targetSettings, true);
@@ -170,3 +171,7 @@ int linkGCC(std::queue<std::string>& linkObjects, struct target_settings& target
     std::cout << command << std::endl;
     return system(command.c_str());
 }
+
+// "gcc -c ${debugString} ${inputFile} -o ${objectFile}"
+
+// "gcc -O0 -Wl,-O0 ${linkFiles}" -o ${execFile}"
