@@ -3,9 +3,22 @@ targets:
     language: cpp
     type: executable
     name: testname
-    cfiles:
+    cppfiles:
       - testBuild/main.c
       - testBuild/test.c
-    c++files:
+    cxxfiles:
+    includes:
     dependencies:
     assets:
+
+environments: 
+  #c/c++:
+  #  backends:
+  #    clang:
+  #    gnu:
+        #- for cfile in cppfiles do cmd("cpp -c " cfile " -o " cfile ".o")
+        #- for cfile in cxxfiles do cmd("cxx -c " cfile " -o " cfile ".o")
+        #- cmd("gcc -O0 -Wl,-O0 " linkFiles " -o " execFile);
+  #    msvc:
+  #    cmake:
+  #java:
