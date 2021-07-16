@@ -8,6 +8,7 @@ targets:
       - testBuild/test.c
     cxxfiles:
     includes:
+      - test
     dependencies:
     assets:
 

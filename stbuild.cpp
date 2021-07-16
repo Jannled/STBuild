@@ -120,7 +120,6 @@ int main(int argc, char** argv)
  * Method to be implemented for each compiler backend
  * @param sourceFilesCPP
  * @param sourceFilesCXX
- * @param sourceIncludes
  * @param targetSettings
  */
 int compileAndLink(std::queue<std::string>& sourceFilesCPP, std::queue<std::string>& sourceFilesCXX, struct target_settings& targetSettings)
@@ -185,6 +184,7 @@ int compileGCC(std::string& inputFile, std::string& includes, std::queue<std::st
 	// Append and run compile command
 	std::string command = cpp ? "g++ -c " : "gcc -c " ;
 	if(targetSettings.debug) command.append("-O0 -g3 ");
+	command.append(includes);
 	command.append(inputFile);
 	command.append(" -o ");
 	command.append(objectFileName);
