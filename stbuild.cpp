@@ -13,7 +13,7 @@
 using namespace Yaml;
 
 // --- Command ---
-// g++ stbuild.cpp yaml/Yaml.cpp -Iyaml/ -std=c++17 -o stbuild
+// g++ -std=c++17 -Iyaml/ stbuild.cpp yaml/Yaml.cpp -o ../stbuild
 
 
 /* Struct definitions */
@@ -99,7 +99,7 @@ int main(int argc, char** argv)
 		}
 
 		// Let the compiler backend do its magic
-		calGCC(sourceFilesC, sourceFilesCPP, targetSettings);
+		calGCC(sourceFilesCPP, sourceFilesCXX, targetSettings);
 
 		targetNames.pop();
 	}
