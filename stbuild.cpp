@@ -21,11 +21,12 @@ struct target_settings {
 	const char* buildOutDir;
 	bool debug;
 	const char* execName;
+	std::queue<std::string>* sourceIncludes;
 };
 
-/* Function definitions */
-int calGCC(std::queue<std::string>& sourceFilesC, std::queue<std::string>& sourceFilesCPP, struct target_settings& targetSettings);
-int compileGCC(std::string& inputFile, std::queue<std::string>& linkObjects, struct target_settings& targetSettings, bool cpp);
+/* Compiler Backend Function definitions */
+int calGCC(std::queue<std::string>& sourceFilesCPP, std::queue<std::string>& sourceFilesCXX, struct target_settings& targetSettings);
+int compileGCC(std::string& inputFile, std::string& includes, std::queue<std::string>& linkObjects, struct target_settings& targetSettings, bool cpp);
 int linkGCC(std::queue<std::string>& linkObjects, struct target_settings& targetSettings);
 
 int main(int argc, char** argv)
@@ -81,9 +82,10 @@ int main(int argc, char** argv)
 		// List of objects that need compilation
 		std::queue<std::string> sourceFilesCPP = std::queue<std::string>();
 		std::queue<std::string> sourceFilesCXX = std::queue<std::string>();
+		std::queue<std::string> sourceIncludes = std::queue<std::string>();
 
 		// Add each C source file to the uncompiled list
-		Node & cfiles = root["targets"][targetNames.front()]["cfiles"];
+		Node & cfiles = root["targets"][targetNames.front()]["cppfiles"];
 		if(cfiles.IsSequence())
 		{
 			for(auto file = cfiles.Begin(); file != cfiles.End(); file++)
@@ -91,12 +93,21 @@ int main(int argc, char** argv)
 		}
 
 		// Add each C++ source file to the uncompiled list
-		Node & pfiles = root["targets"][targetNames.front()]["c++files"];
+		Node & pfiles = root["targets"][targetNames.front()]["cxxfiles"];
 		if(pfiles.IsSequence())
 		{
 			for(auto file = pfiles.Begin(); file != pfiles.End(); file++)
 				sourceFilesCXX.push((*file).second.As<std::string>());
 		}
+
+		Node & ifiles = root["targets"][targetNames.front()]["includes"];
+		if(ifiles.IsSequence())
+		{
+			for(auto file = ifiles.Begin(); file != ifiles.End(); file++)
+				sourceIncludes.push((*file).second.As<std::string>());
+		}
+
+		targetSettings.sourceIncludes = &sourceIncludes;
 
 		// Let the compiler backend do its magic
 		calGCC(sourceFilesCPP, sourceFilesCXX, targetSettings);
@@ -105,12 +116,19 @@ int main(int argc, char** argv)
 	}
 }
 
-int compileAndLink(std::queue<std::string>& sourceFiles, struct target_settings& targetSettings)
+/**
+ * Method to be implemented for each compiler backend
+ * @param sourceFilesCPP
+ * @param sourceFilesCXX
+ * @param sourceIncludes
+ * @param targetSettings
+ */
+int compileAndLink(std::queue<std::string>& sourceFilesCPP, std::queue<std::string>& sourceFilesCXX, struct target_settings& targetSettings)
 {
 	return 0;
 }
 
-int calGCC(std::queue<std::string>& sourceFilesC, std::queue<std::string>& sourceFilesCPP, struct target_settings& targetSettings)
+int calGCC(std::queue<std::string>& sourceFilesCPP, std::queue<std::string>& sourceFilesCXX, struct target_settings& targetSettings)
 {
 	std::cout << "[STBuild] compiling target with gcc" << std::endl;
 
@@ -120,18 +138,29 @@ int calGCC(std::queue<std::string>& sourceFilesC, std::queue<std::string>& sourc
 	// Build file tree
 	std::filesystem::recursive_directory_iterator dirpos(".");
 
-	// For each C source file do compilation
-	while (!sourceFilesC.empty())
+	
+	// Append each include file with command argument to string
+	std::string includes = "";
+	while (!targetSettings.sourceIncludes->empty())
 	{
-		compileGCC(sourceFilesC.front(), linkObjects, targetSettings, false);
-		sourceFilesC.pop();
+		includes.append("-I");
+		includes.append(targetSettings.sourceIncludes->front());
+		includes.append(" ");
+		targetSettings.sourceIncludes->pop();
+	}
+
+	// For each C source file do compilation
+	while (!sourceFilesCPP.empty())
+	{
+		compileGCC(sourceFilesCPP.front(), includes, linkObjects, targetSettings, false);
+		sourceFilesCPP.pop();
 	}
 
 	// For each C++ source file do compilation
-	while (!sourceFilesCPP.empty())
+	while (!sourceFilesCXX.empty())
 	{
-		compileGCC(sourceFilesCPP.front(), linkObjects, targetSettings, true);
-		sourceFilesCPP.pop();
+		compileGCC(sourceFilesCXX.front(), includes, linkObjects, targetSettings, true);
+		sourceFilesCXX.pop();
 	}
 
 	// Link all object files from previous step into an executable
@@ -140,7 +169,7 @@ int calGCC(std::queue<std::string>& sourceFilesC, std::queue<std::string>& sourc
 	return 0;
 }
 
-int compileGCC(std::string& inputFile, std::queue<std::string>& linkObjects, struct target_settings& targetSettings, bool cpp)
+int compileGCC(std::string& inputFile, std::string& includes, std::queue<std::string>& linkObjects, struct target_settings& targetSettings, bool cpp)
 {
 	// Build object file path from binDir, sourceFileName and the ending .o
 	std::string objectFileName = targetSettings.buildOutDir;
